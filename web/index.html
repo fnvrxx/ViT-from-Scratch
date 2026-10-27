@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f3ec" />
+    <meta name="description" content="Catatan interaktif tentang Vision Transformer kecil yang dilatih dari nol pada Fashion-MNIST." />
+    <title>Catatan Visual ViT</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#isi">Lewati navigasi</a>
+    <header class="site-header">
+      <a class="wordmark" href="#atas" aria-label="Catatan Visual ViT, kembali ke atas">Catatan Visual ViT</a>
+      <nav aria-label="Navigasi utama">
+        <a href="#alur">Alur</a>
+        <a href="#lab">Jelajahi model</a>
+        <a href="#hasil">Hasil</a>
+      </nav>
+    </header>
+
+    <main id="isi">
+      <section class="hero page-width" id="atas" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="kicker">Eksperimen 01 / Fashion-MNIST</p>
+          <h1 id="hero-title">Bagaimana gambar menjadi rangkaian token?</h1>
+          <p class="hero-deck">Vision Transformer membaca gambar kecil ini sebagai 49 potongan. Ikuti tiap perubahan bentuknya, lalu lihat attention dari model yang benar-benar dilatih.</p>
+          <a class="text-link" href="#lab">Buka meja eksperimen <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="hero-figure" aria-hidden="true">
+          <div class="hero-image-frame"><canvas id="hero-canvas" width="280" height="280"></canvas></div>
+          <div class="hero-measure"><span>GAMBAR</span><span>28 × 28 piksel</span></div>
+          <div class="hero-tokens"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="hero-measure"><span>CONTOH BARIS</span><span>7 dari 49 patch</span></div>
+        </div>
+      </section>
+
+      <section class="intro-band" aria-label="Ringkasan model">
+        <div class="page-width intro-inner">
+          <p>28 × 28 <span>piksel masukan</span></p>
+          <p>49 <span>patch gambar</span></p>
+          <p>2 <span>lapis encoder</span></p>
+          <p>10 <span>kelas pakaian</span></p>
+        </div>
+      </section>
+
+      <section class="chapter page-width" id="alur" aria-labelledby="alur-title">
+        <div class="chapter-heading">
+          <p class="kicker">01 / Mekanisme</p>
+          <h2 id="alur-title">Dari piksel ke prediksi</h2>
+          <p>Setiap tahap mengubah bentuk tensor. Angkanya membantu kita melihat apa yang masuk dan keluar dari bagian model.</p>
+        </div>
+        <div class="flow-layout">
+          <div class="stage-list" role="group" aria-label="Tahap Vision Transformer">
+            <button class="stage-button is-active" type="button" data-stage="0" aria-pressed="true"><span>01</span><strong>Potong gambar</strong><small>Patch 4 × 4</small></button>
+            <button class="stage-button" type="button" data-stage="1" aria-pressed="false"><span>02</span><strong>Bentuk token</strong><small>Proyeksi dan posisi</small></button>
+            <button class="stage-button" type="button" data-stage="2" aria-pressed="false"><span>03</span><strong>Hubungkan token</strong><small>Self-attention</small></button>
+            <button class="stage-button" type="button" data-stage="3" aria-pressed="false"><span>04</span><strong>Baca kelas</strong><small>Token kelas</small></button>
+          </div>
+          <article class="stage-detail" aria-live="polite">
+            <p class="stage-index" id="stage-index">TAHAP 01 / 04</p>
+            <div class="stage-formula" id="stage-formula">[1, 28, 28] <span aria-hidden="true">→</span> [49, 16]</div>
+            <h3 id="stage-title">Potong gambar</h3>
+            <p id="stage-description">Gambar abu-abu 28 × 28 dibagi menjadi kisi 7 × 7. Tiap patch memuat 16 nilai piksel, lalu disusun berurutan dari kiri atas.</p>
+            <p class="stage-code" id="stage-code">Lihat <code>patchify()</code> di <code>model.py</code>.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="lab-section" id="lab" aria-labelledby="lab-title">
+        <div class="page-width">
+          <div class="lab-heading">
+            <div><p class="kicker">02 / Model terlatih</p><h2 id="lab-title">Jelajahi satu gambar</h2></div>
+            <p>Pilih contoh, lalu ganti token yang bertanya, lapis encoder, dan head attention. Semua angka berasal dari checkpoint ViT.</p>
+          </div>
+
+          <div id="load-state" class="load-state" role="status">Memuat contoh dan hasil model…</div>
+          <div id="empty-state" class="empty-state" role="status" hidden><p>Belum ada contoh gambar di data demo. Jalankan ekspor model untuk mengisi halaman ini.</p><button id="empty-retry-button" type="button">Periksa lagi</button></div>
+          <div id="error-state" class="error-state" role="alert" hidden><p>Data demo belum dapat dimuat. Jalankan ekspor model, lalu muat ulang halaman ini.</p><button id="retry-button" type="button">Coba muat lagi</button></div>
+          <div id="lab-content" hidden>
+            <div class="sample-heading"><h3>Pilih contoh uji</h3><p>Satu contoh pertama dari tiap kelas pada data uji resmi. Pilihan ini ditetapkan sebelum melihat prediksi.</p></div>
+            <div class="sample-list" id="sample-list" role="group" aria-label="Contoh gambar"></div>
+
+            <div class="lab-grid">
+              <div class="image-panel">
+                <div class="panel-topline"><span>01 / Gambar</span><span id="sample-index"></span></div>
+                <div class="canvas-wrap"><canvas id="sample-canvas" width="280" height="280" aria-hidden="true"></canvas></div>
+                <p class="canvas-help">Klik sebuah patch pada gambar, atau gunakan pilihan token di sebelah kanan.</p>
+                <div class="image-caption" id="image-caption"></div>
+              </div>
+
+              <div class="attention-panel">
+                <div class="panel-topline"><span>02 / Attention</span><span>49 patch + 1 token kelas</span></div>
+                <div class="controls">
+                  <label for="query-select">Token yang bertanya <select id="query-select"></select></label>
+                  <label for="layer-select">Lapis encoder <select id="layer-select"></select></label>
+                  <label for="head-select">Head attention <select id="head-select"></select></label>
+                </div>
+                <div class="attention-visual">
+                  <div class="canvas-wrap heatmap-wrap"><canvas id="attention-canvas" width="280" height="280" aria-hidden="true"></canvas></div>
+                  <div class="heatmap-key"><span>Bobot kecil</span><span class="heatmap-gradient" aria-hidden="true"></span><span>Bobot besar</span></div>
+                </div>
+                <p id="attention-summary" class="attention-summary" aria-live="polite"></p>
+                <p class="method-note">Warna dinormalisasi untuk tampilan pada contoh ini. Nilai attention mentah tetap berjumlah 1 untuk seluruh 50 token, termasuk token kelas.</p>
+              </div>
+
+              <div class="prediction-panel">
+                <div class="panel-topline"><span>03 / Prediksi</span><span>Token kelas → 10 logit</span></div>
+                <p class="prediction-label" id="prediction-label"></p>
+                <div class="probability-list" id="probability-list"></div>
+                <p class="method-note">Probabilitas berasal dari softmax pada keluaran model. Nilai tinggi tidak menjamin prediksi benar.</p>
+              </div>
+            </div>
+            <p class="attention-caveat">Peta attention menunjukkan distribusi bobot antar-token pada satu head. Peta ini tidak membuktikan patch mana yang menyebabkan prediksi.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="results page-width" id="hasil" aria-labelledby="hasil-title">
+        <div class="chapter-heading"><p class="kicker">03 / Evaluasi</p><h2 id="hasil-title">Apa hasil latihannya?</h2><p>ViT dan CNN kecil menggunakan pembagian data, optimizer, dan batas epoch yang sama. Angka di bawah berasal dari satu run masing-masing model.</p></div>
+        <div id="results-content" class="results-content"><p>Hasil eksperimen dimuat bersama data demo.</p></div>
+        <div id="loss-section" class="loss-section" hidden><h3>Apakah loss validasi masih membaik?</h3><p>Loss yang lebih rendah berarti prediksi pada data validasi lebih sesuai dengan label. Titik terbaik dipakai untuk memilih checkpoint.</p><div id="loss-chart" class="loss-chart"></div><div class="loss-legend"><span><i class="legend-vit"></i> ViT kecil</span><span><i class="legend-cnn"></i> CNN kecil</span></div></div>
+      </section>
+
+      <section class="notes-section" id="catatan" aria-labelledby="notes-title">
+        <div class="page-width notes-grid">
+          <div><p class="kicker">04 / Batas pembacaan</p><h2 id="notes-title">Yang bisa dan belum bisa disimpulkan</h2></div>
+          <div class="notes-copy"><p>Model ini sengaja kecil agar dapat dilatih di CPU dan setiap lapisnya dapat diperiksa. Hasilnya tidak setara dengan ViT besar yang dilatih lebih dulu pada dataset berskala besar.</p><p>Sepuluh gambar di atas membantu menelusuri komputasi model. Untuk menilai kinerja umum, gunakan metrik pada seluruh data uji, termasuk confusion matrix di berkas hasil.</p><p>Bacaan: <a href="https://arxiv.org/abs/2010.11929" target="_blank" rel="noopener noreferrer">paper Vision Transformer</a>, <a href="https://github.com/zalandoresearch/fashion-mnist" target="_blank" rel="noopener noreferrer">dataset Fashion-MNIST</a>, dan <a href="https://arxiv.org/abs/1902.10186" target="_blank" rel="noopener noreferrer">batas penafsiran attention</a>.</p></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer page-width"><p>Catatan Visual ViT · eksperimen pembelajaran</p><a href="#atas">Kembali ke atas ↑</a></footer>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
